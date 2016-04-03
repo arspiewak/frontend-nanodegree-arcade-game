@@ -18,6 +18,7 @@ var Board = function() {
     this.blockHeight = 83;      // pixels
     this.blockWidth = 101;       // pixels
     this.numEnemies = 4;
+//this.numEnemies = 1;    //debug
 
     // Pre-calculate base coordinates for rows and columns of background blocks
     var xOffset = [], yOffset = [];
@@ -71,16 +72,6 @@ var board = new Board;
 
 // Enemies our player must avoid
 var Enemy = function() {
-    /* NOTE: Objects board and player are designed as single instances, so they
-     * use private properties almost exclusively, exposing only a few methods and
-     * properties. Enemy is designed as a class, with prototypal inheritance. In
-     * Javascript, all properties used by prototype methods must be public.
-     * In a real-world application I might choose to skip prototypes and give
-     * each enemy its own copies of the public functions, keeping the internal
-     * data private. But as a class exercise, I wanted to demonstrate both
-     * approaches.
-     */
-
     // Variables applied to each of our instances go here,
     // we've provided one for you to get started
 
@@ -88,11 +79,14 @@ var Enemy = function() {
     // a helper we've provided to easily load images
     this.sprite = 'images/enemy-bug.png';
 
-    // My code: first, stuff that's only used internally by each Enemy
-    this.spriteImg = Resources.load(this.sprite); // Image itself
-    if (this.spriteImg == null) {
-        console.log("Enemy.constructor: unable to load image", this.sprite);
-    }
+    /* My code: first, the image. We'll use the image itself and its width,
+     * but they won't be available till Resources loads them (via imgInit).
+     */
+    this.spriteImg = null;
+    this.spriteWidth = null;
+
+    // An index number to ID the Enemy instance when debugging
+    this.ID = allEnemies.length;
 
     /* The following three sets of properties are all set/reset at the start of
      * each pass by setNewPass().
@@ -119,17 +113,26 @@ var Enemy = function() {
      */
      this.pauseSec = null;
 
-     // Call the first setup for these properties
+     /* The first setup for these properties happens in the first call to
+      * setNewPass(), called from imgInit()
+     */
+};
+
+// Deferred setup, has to wait till Resources is loaded. Called by gImgInit().
+Enemy.prototype.imgInit = function() {
+    this.spriteImg = Resources.get(this.sprite);
+    this.spriteWidth = this.spriteImg.width;
     this.setNewPass();
 };
 
 // Helper function to (re)initialize for a new pass
 Enemy.prototype.setNewPass = function() {
-    this.crossTime = gRand(2) + 1;  // cross in 1 - 3 sec
-    this.pathIdx = gRand(2) + 1;    // path 0 is the water, 1-3 are enemy paths
+    this.crossTime = gRand(3) + 1;  // cross in 1 - 3 sec
+    this.pathIdx = gRand(3) + 1;    // path 0 is the water, 1-3 are enemy paths
+//this.pathIdx = 0;   //debug
     this.xPerSec = Math.floor(board.canvasWidth / this.crossTime);
     this.pathY = this.pathIdx * board.blockHeight;
-    this.currX = -(this.sprite.width); // Completely offscreen until first update
+    this.currX = -(this.spriteWidth); // Completely offscreen until first update
 
     // If the path is already congested, choose a pause time
     if (board.congestionCheck(this.pathIdx)) {
@@ -137,12 +140,13 @@ Enemy.prototype.setNewPass = function() {
     } else {
         this.pauseSec = 0;
     }
+//console.log(this.ID, this.pathIdx, this.crossTime, this.xPerSec, this.currX);   //debug
 };
 
 // Update the enemy's position, required method for game
 // Parameter: dt, a time delta between ticks
 Enemy.prototype.update = function(dt) {
-
+//console.log(dt, this.ID, this.pathIdx, this.crossTime, this.xPerSec, this.currX);
     /* If this enemy is waiting to enter the board because of congestion, see
      * if the wait is over. Return immediately if pauseSec is still positive.
      */
@@ -159,11 +163,12 @@ Enemy.prototype.update = function(dt) {
     // You should multiply any movement by the dt parameter
     // which will ensure the game runs at the same speed for
     // all computers.
-    this.currX += this.xPerSec * dt;
+    this.currX += Math.floor(this.xPerSec * dt);
+//console.log(dt, this.currX);    //debug
 
     // Have we exited the board? Reset for a new pass. Otherwise, register loc
     if (this.currX > board.canvasWidth) {
-        setNewPass();
+        this.setNewPass();
     } else {
         board.recordLocation(this.pathIdx, this.currX, this.spriteWidth);
     }
@@ -174,10 +179,15 @@ Enemy.prototype.update = function(dt) {
 // Draw the enemy on the screen, required method for game
 Enemy.prototype.render = function() {
     if (this.PauseSec > 0) {    // Skip render if waiting for congestion
+        return;
+    } else {
         /* Note name differences from Udacity assignment code: X and Y names
          * are more descriptive, and we only look up the image once (on
          * construction), not on each pass.
          */
+        if (this.spriteImg == null) {            // debug test
+            alert("Null enemy image" + this.sprite);
+        }
         ctx.drawImage(this.spriteImg, this.currX, this.pathY);
     }
 };
@@ -187,51 +197,55 @@ Enemy.prototype.render = function() {
 // a handleInput() method.
 var Player = function() {
 
-     playerSprite = 'images/char-boy.png';  // Default-only. TODO: add choice
-     playerImg = Resources.load(playerSprite);
+    playerSprite = 'images/char-boy.png';  // Default-only. TODO: choose avatar
+    // The image will be linked by imgInit once Resources is done loading.
+    playerImg = null;
 
-     /* Starting location, using block indexes, in the middle of the bottom
-      * row. We'll return here whenever we win or die.
-      */
-     startCol = Math.floor(board.numCols / 2);
-     startRow = board.numRows - 1;
+    /* Starting location, using block indexes, in the middle of the bottom
+     * row. We'll return here whenever we win or die.
+     */
+    startCol = Math.floor(board.numCols / 2);
+    startRow = board.numRows - 1;
 
-     x = startCol;
-     y = startRow;
+    x = startCol;
+    y = startRow;
 
-     // An array stores keystroke counts from handleInput each frame cycle
-     var keyPresses = {
+    // An array stores keystroke counts from handleInput each frame cycle
+    var keyPresses = {
         'left':  0,
         'up':    0,
         'right': 0,
         'down':  0
-     };
+    };
 
-     this.update = function() {
+    this.update = function() {
         /* TODO apply/reset keystrokes + test boundaries, check for win and
          * collision
          */
         return;
-     };
+    };
 
-     this.render = function() {
-        if (playerImg == null) {
-            playerImg = Resources.get(playerSprite);
+    this.render = function() {
+        if (playerImg == null) {            // debug test
+            alert("Null player image " + playerSprite);
         }
         var coord = board.getCoordinates(x, y);
         ctx.drawImage(playerImg, coord[0], coord[1]);
-     };
+    };
 
-     this.handleInput = function(move) {
+    this.handleInput = function(move) {
         // Increment the member of the keyPresses object indexed by 'move'
         if (typeof keyPresses[move] === "undefined") {
             return;
         }
         keyPresses[move] ++;
-     };
+    };
+
+    this.imgInit =  function() {
+        playerImg = Resources.get(playerSprite);
+    };
 
 };
-var player = new Player;
 
 // Now instantiate your objects.
 // Place all enemy objects in an array called allEnemies
@@ -240,8 +254,16 @@ for (var i = 0; i < board.numEnemies; i++) {
     allEnemies[i] = new Enemy;
 }
 // Place the player object in a variable called player
+var player = new Player;
 
-
+// Tell Resources to initialize our images when it's done loading.
+function gImgInit() {
+    for (var i = 0, stop = allEnemies.length; i < stop; i++) {
+        allEnemies[i].imgInit();
+    }
+    player.imgInit();
+}
+Resources.onReady(gImgInit);
 
 // This listens for key presses and sends the keys to your
 // Player.handleInput() method. You don't need to modify this.
