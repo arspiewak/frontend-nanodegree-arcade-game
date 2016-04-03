@@ -20,6 +20,9 @@ var Board = function() {
     this.numEnemies = 4;
 //this.numEnemies = 1;    //debug
 
+    // A flag to end the game. Set with the Esc key, checked by engine.main().
+    this.gameStatus = 'run';
+
     // Pre-calculate base coordinates for rows and columns of background blocks
     var xOffset = [], yOffset = [];
     for (var i = 0, offset = 0; i < this.numCols; i++) {
@@ -272,8 +275,13 @@ document.addEventListener('keyup', function(e) {
         37: 'left',
         38: 'up',
         39: 'right',
-        40: 'down'
+        40: 'down',
+        27: 'esc'
     };
 
-    player.handleInput(allowedKeys[e.keyCode]);
+    if (e.keyCode = 27) {
+        board.gameStatus = 'stop';
+    } else {
+        player.handleInput(allowedKeys[e.keyCode]);
+    }
 });
