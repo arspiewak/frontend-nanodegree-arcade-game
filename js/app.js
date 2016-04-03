@@ -222,9 +222,44 @@ var Player = function() {
     };
 
     this.update = function() {
-        /* TODO apply/reset keystrokes + test boundaries, check for win and
-         * collision
-         */
+         /* Apply all keystrokes to x and y indexes. At a normal frame rate we
+          * can at most expect one keystroke per frame, but it's cheap to not
+          * make that assumption. Note that y coordinates are 0 at the top
+          * and increase down the screen.
+          */
+        x += (keyPresses['right'] - keyPresses['left']);
+        y += (keyPresses['down'] - keyPresses['up']);
+
+        // Test for board boundaries
+        if (x < 0) {
+            x = 0;
+        } else if (x > board.numCols - 1) {
+            x = board.numCols - 1;
+        }
+        if (y < 0) {
+            y = 0;
+        } else if (y > board.numRows - 1) {
+            y = board.numRows - 1;
+        }
+
+        // Test for a win. Our goal, the water, is in row 0.
+        if (y === 0) {
+            this.processWin();
+console.log('win');     //debug
+        } else {
+            // Test for a collision, which doesn't apply to a win.
+            if (board.detectCollision(x, y) === 'enemy') {
+                this.processEnemyCollision();
+console.log('collision');       //debug
+            } // Other collision types (e.g. rewards) may be added later.
+        }
+
+        // Reset keycounts for the next frame cycle
+        keyPresses['left'] = 0;
+        keyPresses['up'] = 0;
+        keyPresses['right'] = 0;
+        keyPresses['down'] = 0;
+
         return;
     };
 
@@ -242,10 +277,26 @@ var Player = function() {
             return;
         }
         keyPresses[move] ++;
+//console.log(keyPresses);    //debug
     };
 
     this.imgInit =  function() {
+        // Called to complete setup once Resources is loaded
         playerImg = Resources.get(playerSprite);
+    };
+
+    this.processWin = function() {
+        // Processing when the player wins (reaches the water row)
+        // First implementation just returns to start. Bells and whistles TBA.
+        x = startCol;
+        y = startRow;
+    };
+
+    this.processEnemyCollision = function() {
+        // Processing for when the player collides with an enemy
+        // First implementation just returns to start. Bells and whistles TBA.
+        x = startCol;
+        y = startRow;
     };
 
 };
@@ -279,7 +330,7 @@ document.addEventListener('keyup', function(e) {
         27: 'esc'
     };
 
-    if (e.keyCode = 27) {
+    if (e.keyCode == 27) {
         board.gameStatus = 'stop';
     } else {
         player.handleInput(allowedKeys[e.keyCode]);
