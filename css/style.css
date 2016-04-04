@@ -1,3 +1,74 @@
 body {
     text-align: center;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	-ms-box-sizing: border-box;
+	box-sizing: border-box;
+	font-family: "Merriweather", Geneva, sans-serif;
+    background-color: #054f25;
+
+    /*
+     * Default font size for XS (phone) sized viewports. The body style
+     * sets the 1-em size; other styles' sizes are based on em sizes.
+     */
+    font-size: 75%;
 }
+
+/* Font size for larger viewports */
+@media (min-width: 768px) {
+    body {
+        font-size: 100%;
+    }
+}
+/* Styles for images (outside the game area) */
+
+/*
+ * The two circular images used in the banner have absolute max height & width
+ * so they don't expand to fill smaller viewports. That lets us use a split
+ * (6 + 6 column) format for xs viewports without getting gigantic (75%)
+ * logos. I haven't figured out how to use col-*-offset-* to do this.
+ */
+.udacity-logo {
+    width: 75%;         /* scaled as percent of parent column */
+    background-color: white;
+    border-radius: 20%;
+    border: thick solid #00b9ff;
+    margin-top: 5%;
+    max-height: 100px;
+    max-width: 100px;
+}
+
+.avatar {
+    width: 75%;
+    border-radius: 50%;
+    border: thick solid #00b9ff;
+    margin-top: 15%;
+    max-height: 100px;
+    max-width: 100px;
+}
+
+/* Text styles */
+
+.my-name {
+    margin: 0;
+    font-size: 4em;
+    font-weight: 300;
+    padding-top: 3%;
+    text-transform: none;
+    color: #d7a3f1;
+}
+
+.job-title {
+    font-size: 2em;
+    font-weight: 300;
+    text-transform: none;
+    margin: 3px 2% 0 0;
+    color: #d7a3f1;
+}
+
+/* Horizontal line to set off header */
+hr {
+    border-width: 2px;
+    border-color: #d7a3f1;
+}
+
