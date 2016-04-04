@@ -29,11 +29,11 @@ body {
  * logos. I haven't figured out how to use col-*-offset-* to do this.
  */
 .udacity-logo {
-    width: 75%;         /* scaled as percent of parent column */
+    width: 100%;         /* scaled as percent of parent column */
     background-color: white;
     border-radius: 20%;
     border: thick solid #00b9ff;
-    margin-top: 5%;
+    margin-top: 15%;
     max-height: 100px;
     max-width: 100px;
 }

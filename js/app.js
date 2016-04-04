@@ -247,8 +247,24 @@ Enemy.prototype.render = function() {
 var Player = function() {
 
     playerSprite = 'images/char-boy.png';  // Default-only. TODO: choose avatar
+    this.sprite = playerSprite;             // as specified in the assignment
     // The image will be linked by imgInit once Resources is done loading.
     playerImg = null;
+
+    /* A delay field allows the player to remain in place while the rest of
+     * the board's animations continue. This is used to let wins and
+     * collisions register visually before the player's position is reset.
+     * A useSecondaryImage flag lets update() tell render() about special cases,
+     * used so far in the case of a win or a collision.
+     */
+     var animationDelay = 0;
+     var useSecondaryImage = 'none';
+
+    // Secondary images: halo celebrates a win, ghost reflects a collision
+    haloSprite = 'images/star2.png';
+    haloImg = null;
+    ghostSprite = 'images/anti-char-boy.png';   // inverted image of player
+    ghostImg = null;
 
     /* Starting location, using block indexes, in the middle of the bottom
      * row. We'll return here whenever we win or die.
@@ -267,12 +283,33 @@ var Player = function() {
         'down':  0
     };
 
-    this.update = function() {
-         /* Apply all keystrokes to x and y indexes. At a normal frame rate we
-          * can at most expect one keystroke per frame, but it's cheap to not
-          * make that assumption. Note that y coordinates are 0 at the top
-          * and increase down the screen.
-          */
+    this.update = function(dt) {
+        /* If an animation delay has been set, process it first. If it still
+         * applies, return. We'll reset any keyPresses when the delay's over.
+         */
+        if (animationDelay > 0) {
+            animationDelay -= dt;
+            if (animationDelay > 0) {
+                return;
+            }
+            else {
+                // Delay is over. Reset to start and continue normally.
+                animationDelay = 0;
+                useSecondaryImage = 'none';
+                x = startCol;
+                y = startRow;
+                keyPresses['left'] = 0;
+                keyPresses['up'] = 0;
+                keyPresses['right'] = 0;
+                keyPresses['down'] = 0;
+            }
+        }
+
+        /* Apply all keystrokes to x and y indexes. At a normal frame rate we
+         * can at most expect one keystroke per frame, but it's cheap to not
+         * make that assumption. Note that y coordinates are 0 at the top
+         * and increase down the screen.
+         */
         x += (keyPresses['right'] - keyPresses['left']);
         y += (keyPresses['down'] - keyPresses['up']);
 
@@ -312,7 +349,17 @@ var Player = function() {
             alert("Null player image " + playerSprite);
         }
         var coord = board.getCoordinates(x, y);
-        ctx.drawImage(playerImg, coord[0], coord[1]);
+        switch (useSecondaryImage) {
+            case 'halo':
+                ctx.drawImage(haloImg, coord[0], coord[1]);
+                // Fall through & draw the normal player sprite over the halo
+            case 'none':
+            default:
+                ctx.drawImage(playerImg, coord[0], coord[1]);
+                break;
+            case 'ghost':
+                ctx.drawImage(ghostImg, coord[0], coord[1]);
+        }
     };
 
     this.handleInput = function(move) {
@@ -327,21 +374,21 @@ var Player = function() {
     this.imgInit =  function() {
         // Called to complete setup once Resources is loaded
         playerImg = Resources.get(playerSprite);
+        haloImg = Resources.get(haloSprite);
+        ghostImg = Resources.get(ghostSprite);
     };
 
     this.processWin = function() {
         // Processing when the player wins (reaches the water row)
-        // First implementation just returns to start. Bells and whistles TBA.
-        x = startCol;
-        y = startRow;
+        useSecondaryImage = 'halo';     // Add a halo to our hero
+        animationDelay = 1;             // Savor the moment
         console.log('You win');     // debug
     };
 
     this.processEnemyCollision = function() {
         // Processing for when the player collides with an enemy
-        // First implementation just returns to start. Bells and whistles TBA.
-        x = startCol;
-        y = startRow;
+        useSecondaryImage = 'ghost';
+        animationDelay = 1;
         console.log('You lose');    // debug
     };
 

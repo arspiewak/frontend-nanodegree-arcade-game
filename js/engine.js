@@ -86,7 +86,6 @@ var Engine = (function(global) {
      */
     function update(dt) {
         updateEntities(dt);
-        // checkCollisions();
     }
 
     /* This is called by the update function and loops through all of the
@@ -100,7 +99,7 @@ var Engine = (function(global) {
         allEnemies.forEach(function(enemy) {
             enemy.update(dt);
         });
-        player.update();
+        player.update(dt);
     }
 
     /* This function initially draws the "game level", it will then call
@@ -110,6 +109,12 @@ var Engine = (function(global) {
      * they are just drawing the entire screen over and over.
      */
     function render() {
+        /* Missing code: clear the canvas each time. my "victory" processing
+         * adds a halo to the player, which extends above the opaque part of
+         * the top-row background blocks. This zaps the orphaned halo.
+         */
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
         /* This array holds the relative URL to the image used
          * for that particular row of the game level.
          */
@@ -177,7 +182,9 @@ var Engine = (function(global) {
         'images/water-block.png',
         'images/grass-block.png',
         'images/enemy-bug.png',
-        'images/char-boy.png'
+        'images/char-boy.png',
+        'images/anti-char-boy.png',
+        'images/star2.png'
     ]);
     Resources.onReady(init);
 
