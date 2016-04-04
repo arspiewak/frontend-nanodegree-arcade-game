@@ -7,8 +7,10 @@ function gRand (x) {
  * single global object).
  */
 var Board = function() {
-    // Enemies need to know if they've overshot the right edge of the canvas
-    //this.canvasWidth = document.querySelector('canvas').width;
+    /* Enemies need to know if they've overshot the right edge of the canvas.
+     * Engine.js has been modified to use these dimensions when the canvas
+     * is created.
+     */
     this.canvasWidth = 505;
     this.canvasHeight = 606;
 
@@ -17,7 +19,7 @@ var Board = function() {
     this.numCols = 5;
     this.blockHeight = 83;      // pixels
     this.blockWidth = 101;       // pixels
-    this.numEnemies = 4;
+    this.numEnemies = 3;
 //this.numEnemies = 1;    //debug
 
     // A flag to end the game. Set with the Esc key, checked by engine.main().
@@ -35,20 +37,31 @@ var Board = function() {
         offset += this.blockHeight;
     }
 
-    // TODO Row array stores non-player profiles that are in each row
+    /* An array for each row holds the profile of each non-player entity
+     * that is drawn on it. Each entity's update() calls recordLocation() to
+     * set its location and the player's call to detectCollision() queries
+     * it. Profiles are stored in the format {ID, type, xStart, xEnd}.
+     */
+     this.rowProfiles = [];
+     for (i = 0; i < this.numRows; i++) {
+        this.rowProfiles[i] = [];
+     }
 
     // PUBLIC FUNCTIONS
 
     // For a new frame cycle: reset the board
     this.reset = function () {
-        return; // TODO board structure
+        for (var i = 0, stop = this.numRows; i < stop; i++) {
+            this.rowProfiles[i] = [];
+        }
     };
 
     /* Record a non-player's location during update. Note: collisions between
-     * non-players are not fatal.
+     * non-players are not fatal. Location profiles are stored in the format
+     * {ID, type, xStart, xEnd}.
      */
-    this.recordLocation = function (pathIdx, x, spriteWidth) {
-        return; // TODO board structure
+    this.recordLocation = function (row, profile) {
+        this.rowProfiles[row].push(profile);
     };
 
     // Check for enemy congestion on a particular row (new ones will wait)
@@ -68,7 +81,30 @@ var Board = function() {
      * Reward collisions may come later.
      */
     this.detectCollision = function (column, row) {
-        return 'clear';   // TODO collision processing
+        // First, set the x pixel boundaries of the block the player is in
+        var pStart = xOffset[column];
+        var pEnd = pStart + this.blockWidth - 1;
+        var eStart, eEnd;     // loop internal lookup variables
+
+        // Loop through the enemy profiles in the player's row
+        for (var i = 0, stop = this.rowProfiles[row].length; i < stop; i++) {
+            /* The player and enemy collide if the enemy starts or ends
+             * in the player's square. The player "occupies" a whole square,
+             * even though the graphic doesn't reach its boundaries. Because
+             * enemies' animation is smooth, they often have parts in two
+             * squares. Their space is defined by img location and width,
+             * which may include some transparent pixels at the borders.
+             */
+             eStart = this.rowProfiles[row][i].xStart;
+             eEnd = this.rowProfiles[row][i].xEnd;
+             if ( (pStart <= eStart && eStart <= pEnd) ||
+                  (pStart <= eEnd && eEnd <= pEnd) ) {
+                // Report a collision
+                return this.rowProfiles[row][i].type;
+             }
+        }
+        // Made it through
+        return 'clear';
     };
 };
 var board = new Board;
@@ -88,7 +124,7 @@ var Enemy = function() {
     this.spriteImg = null;
     this.spriteWidth = null;
 
-    // An index number to ID the Enemy instance when debugging
+    // An index number to identify the Enemy instance when debugging
     this.ID = allEnemies.length;
 
     /* The following three sets of properties are all set/reset at the start of
@@ -169,11 +205,21 @@ Enemy.prototype.update = function(dt) {
     this.currX += Math.floor(this.xPerSec * dt);
 //console.log(dt, this.currX);    //debug
 
-    // Have we exited the board? Reset for a new pass. Otherwise, register loc
+    // Have we exited the board?
     if (this.currX > board.canvasWidth) {
+        // Reset for a new pass across the board
         this.setNewPass();
     } else {
-        board.recordLocation(this.pathIdx, this.currX, this.spriteWidth);
+        /* Register our ID and location for collision detection. The first
+         * frame of a new pass we're offscreen, so we didn't register above.
+         */
+        var profile = {
+            ID: this.ID,
+            type: 'enemy',
+            xStart: this.currX,
+            xEnd: this.currX + this.spriteWidth - 1
+        };
+        board.recordLocation(this.pathIdx, profile);
     }
 
     return;
@@ -245,12 +291,10 @@ var Player = function() {
         // Test for a win. Our goal, the water, is in row 0.
         if (y === 0) {
             this.processWin();
-console.log('win');     //debug
         } else {
             // Test for a collision, which doesn't apply to a win.
             if (board.detectCollision(x, y) === 'enemy') {
                 this.processEnemyCollision();
-console.log('collision');       //debug
             } // Other collision types (e.g. rewards) may be added later.
         }
 
@@ -290,6 +334,7 @@ console.log('collision');       //debug
         // First implementation just returns to start. Bells and whistles TBA.
         x = startCol;
         y = startRow;
+        console.log('You win');     // debug
     };
 
     this.processEnemyCollision = function() {
@@ -297,6 +342,7 @@ console.log('collision');       //debug
         // First implementation just returns to start. Bells and whistles TBA.
         x = startCol;
         y = startRow;
+        console.log('You lose');    // debug
     };
 
 };
