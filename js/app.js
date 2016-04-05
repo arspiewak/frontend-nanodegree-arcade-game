@@ -261,7 +261,7 @@ var Player = function() {
      var useSecondaryImage = 'none';
 
     // Secondary images: halo celebrates a win, ghost reflects a collision
-    haloSprite = 'images/star2.png';
+    haloSprite = 'images/Star2.png';
     haloImg = null;
     ghostSprite = 'images/anti-char-boy.png';   // inverted image of player
     ghostImg = null;
