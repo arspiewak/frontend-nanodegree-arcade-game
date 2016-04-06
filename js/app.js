@@ -265,12 +265,12 @@ var Player = function() {
     x = startCol;
     y = startRow;
 
-    // An array stores keystroke counts from handleInput each frame cycle
+    // Store keystroke counts from handleInput each frame cycle
     var keyPresses = {
-        'left':  0,
-        'up':    0,
-        'right': 0,
-        'down':  0
+        left: 0,
+        up: 0,
+        right: 0,
+        down: 0
     };
 
     // METHODS
@@ -294,10 +294,10 @@ var Player = function() {
                 useSecondaryImage = 'none';
                 x = startCol;
                 y = startRow;
-                keyPresses['left'] = 0;
-                keyPresses['up'] = 0;
-                keyPresses['right'] = 0;
-                keyPresses['down'] = 0;
+                keyPresses.left = 0;
+                keyPresses.up = 0;
+                keyPresses.right = 0;
+                keyPresses.down = 0;
             }
         }
 
@@ -306,8 +306,8 @@ var Player = function() {
          * make that assumption. Note that y coordinates are 0 at the top
          * and increase down the screen.
          */
-        x += (keyPresses['right'] - keyPresses['left']);
-        y += (keyPresses['down'] - keyPresses['up']);
+        x += (keyPresses.right - keyPresses.left);
+        y += (keyPresses.down - keyPresses.up);
 
         // Test for board boundaries
         if (x < 0) {
@@ -332,10 +332,10 @@ var Player = function() {
         }
 
         // Reset keycounts for the next frame cycle
-        keyPresses['left'] = 0;
-        keyPresses['up'] = 0;
-        keyPresses['right'] = 0;
-        keyPresses['down'] = 0;
+        keyPresses.left = 0;
+        keyPresses.up = 0;
+        keyPresses.right = 0;
+        keyPresses.down = 0;
 
         return;
     };
@@ -368,8 +368,8 @@ var Player = function() {
      *      pressed.
      */
     this.handleInput = function(move) {
-        /* Increment the member of the keyPresses object that is indexed by
-         * the value of move.
+        /* Increment the member of the keyPresses object whose key equals
+         * move.
          */
         if (typeof keyPresses[move] === "undefined") {
             return;
