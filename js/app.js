@@ -1,11 +1,28 @@
-// Global helper fxn gives a random integer between 0 and the argument, inclusive
+/* app.js   Alan Spiewak
+ * This file contains the student-designed code to implement the Classic Arcade
+ * Game project (Udacity FEND P4).Three object classes are defined and
+ * instantiated:
+ *      Board - A single instance represents the game board. Properties
+ *      define the board's dimensions and the number of Enemy entities. Methods
+ *      manage where entities are on the board and whether they are colliding
+ *      with each other.
+ *
+ *      Enemy - Multiple instances of this class animate figures (bugs) that
+ *      cross the board and prevent the Player from reaching the goal.
+ *
+ *      Player - A single instance animates a figure that represents the player
+ *      on the game board.
+ */
+
+/* Global helper function returns a random integer between 0 and the argument,
+ * inclusive.
+ */
 function gRand (x) {
     return Math.floor(Math.random() * x);
 }
 
-/* First, some info about the board itself that our updates will need (in a
- * single global object).
- */
+// Constructor of the Board class, described above.
+
 var Board = function() {
     /* Enemies need to know if they've overshot the right edge of the canvas.
      * Engine.js has been modified to use these dimensions when the canvas
@@ -18,9 +35,8 @@ var Board = function() {
     this.numRows = 6;
     this.numCols = 5;
     this.blockHeight = 83;      // pixels
-    this.blockWidth = 101;       // pixels
+    this.blockWidth = 101;      // pixels
     this.numEnemies = 3;
-//this.numEnemies = 1;    //debug
 
     // A flag to end the game. Set with the Esc key, checked by engine.main().
     this.gameStatus = 'run';
@@ -38,7 +54,7 @@ var Board = function() {
     }
 
     /* An array for each row holds the profile of each non-player entity
-     * that is drawn on it. Each entity's update() calls recordLocation() to
+     * that is drawn on it. Each enemy's update() calls recordLocation() to
      * set its location and the player's call to detectCollision() queries
      * it. Profiles are stored in the format {ID, type, xStart, xEnd}.
      */
@@ -47,7 +63,7 @@ var Board = function() {
         this.rowProfiles[i] = [];
      }
 
-    // PUBLIC FUNCTIONS
+    // METHODS
 
     // For a new frame cycle: reset the board
     this.reset = function () {
@@ -56,17 +72,16 @@ var Board = function() {
         }
     };
 
-    /* Record a non-player's location during update. Note: collisions between
-     * non-players are not fatal. Location profiles are stored in the format
-     * {ID, type, xStart, xEnd}.
+    /* Record an enemy's location during update. Note: collisions between
+     * enemies are not fatal, they simply overlap.
+     *
+     * Parameters:
+     *      row = the index of the row that the enemy is crossing
+     *      profile = the enemy's location profile on the row. Format
+     *          {ID, type, xStart, xEnd}.
      */
     this.recordLocation = function (row, profile) {
         this.rowProfiles[row].push(profile);
-    };
-
-    // Check for enemy congestion on a particular row (new ones will wait)
-    this.congestionCheck = function (row) {
-        return false;   // TODO base on length of row's profileCount
     };
 
     /* Calculate the drawing coordinates for a block's (x,y) index
@@ -119,22 +134,24 @@ var Enemy = function() {
     this.sprite = 'images/enemy-bug.png';
 
     /* My code: first, the image. We'll use the image itself and its width,
-     * but they won't be available till Resources loads them (via imgInit).
+     * but they won't be available till Resources loads them (set by imgInit).
      */
     this.spriteImg = null;
     this.spriteWidth = null;
-
-    // An index number to identify the Enemy instance when debugging
     this.ID = allEnemies.length;
 
     /* The following three sets of properties are all set/reset at the start of
      * each pass by setNewPass().
      *
      * Information about where the image appears:
-     *  pathIdx = which of the 3 stone rows (1, 2, or 3) this Enemy will cross on
-     *      the current pass
-     *  pathY = y coordinate of the top of the chosen path. Computed once per pass.
-     *  currX = current x coordinate of the sprite's left corner. Computed each frame.
+     *  pathIdx = which of the 3 stone rows (1, 2, or 3) this Enemy will cross
+     *      on the current pass
+     *  pathY = y coordinate of the top of the chosen path. Computed once per
+     *      pass.
+     *  currX = current x coordinate of the sprite's left edge, recomputed each
+     *      frame. Because enemy animation is smooth, x location is tracked by
+     *      pixel. Player location is incremented by block (changed by keypress)
+     *      so it is tracked by x index, not pixel.
      */
      this.pathIdx = null;
      this.pathY = null;
@@ -147,14 +164,9 @@ var Enemy = function() {
      this.crossTime = null;
      this.xPerSec = null;
 
-    /* Delay-of-entry info, so we don't get too much traffic in one row.
-     *  pauseSec = time this enemy should wait before entering the game.
-     */
-     this.pauseSec = null;
-
      /* The first setup for these properties happens in the first call to
       * setNewPass(), called from imgInit()
-     */
+      */
 };
 
 // Deferred setup, has to wait till Resources is loaded. Called by gImgInit().
@@ -168,42 +180,19 @@ Enemy.prototype.imgInit = function() {
 Enemy.prototype.setNewPass = function() {
     this.crossTime = gRand(3) + 1;  // cross in 1 - 3 sec
     this.pathIdx = gRand(3) + 1;    // path 0 is the water, 1-3 are enemy paths
-//this.pathIdx = 0;   //debug
     this.xPerSec = Math.floor(board.canvasWidth / this.crossTime);
     this.pathY = this.pathIdx * board.blockHeight;
     this.currX = -(this.spriteWidth); // Completely offscreen until first update
-
-    // If the path is already congested, choose a pause time
-    if (board.congestionCheck(this.pathIdx)) {
-        this.pauseSec = gRand(4) + 1;
-    } else {
-        this.pauseSec = 0;
-    }
-//console.log(this.ID, this.pathIdx, this.crossTime, this.xPerSec, this.currX);   //debug
 };
 
 // Update the enemy's position, required method for game
 // Parameter: dt, a time delta between ticks
 Enemy.prototype.update = function(dt) {
-//console.log(dt, this.ID, this.pathIdx, this.crossTime, this.xPerSec, this.currX);
-    /* If this enemy is waiting to enter the board because of congestion, see
-     * if the wait is over. Return immediately if pauseSec is still positive.
-     */
-    if (this.pauseSec > 0) {
-        this.pauseSec -= dt;
-        if (this.pauseSec > 0) {
-            return;
-        } else {
-            // Zap the delay and proceed normally
-            this.pauseSec = 0;
-        }
-    }
 
     // You should multiply any movement by the dt parameter
     // which will ensure the game runs at the same speed for
     // all computers.
     this.currX += Math.floor(this.xPerSec * dt);
-//console.log(dt, this.currX);    //debug
 
     // Have we exited the board?
     if (this.currX > board.canvasWidth) {
@@ -234,9 +223,6 @@ Enemy.prototype.render = function() {
          * are more descriptive, and we only look up the image once (on
          * construction), not on each pass.
          */
-        if (this.spriteImg == null) {            // debug test
-            alert("Null enemy image" + this.sprite);
-        }
         ctx.drawImage(this.spriteImg, this.currX, this.pathY);
     }
 };
@@ -244,9 +230,13 @@ Enemy.prototype.render = function() {
 // Now write your own player class
 // This class requires an update(), render() and
 // a handleInput() method.
+
+/* Constructor for the Player class. As only one instance is used, this
+ * class uses its constructor's closure to store its non-public objects.
+ */
 var Player = function() {
 
-    playerSprite = 'images/char-boy.png';  // Default-only. TODO: choose avatar
+    playerSprite = 'images/char-boy.png';  // Default only. TODO: avatar choice
     this.sprite = playerSprite;             // as specified in the assignment
     // The image will be linked by imgInit once Resources is done loading.
     playerImg = null;
@@ -283,6 +273,12 @@ var Player = function() {
         'down':  0
     };
 
+    // METHODS
+
+    /* Calculate and store the data required to render the next frame.
+     * parameter: dt = the number of seconds elapsed since the last frame.
+     *      This value is usually between 0 and 1.
+     */
     this.update = function(dt) {
         /* If an animation delay has been set, process it first. If it still
          * applies, return. We'll reset any keyPresses when the delay's over.
@@ -293,7 +289,7 @@ var Player = function() {
                 return;
             }
             else {
-                // Delay is over. Reset to start and continue normally.
+                // Delay is over. Reset to start position & continue normally.
                 animationDelay = 0;
                 useSecondaryImage = 'none';
                 x = startCol;
@@ -344,13 +340,14 @@ var Player = function() {
         return;
     };
 
+    /* Draw the player on the board. Note the player's location is stored as
+     * x and y block indexes, not pixel coordinates.
+     */
     this.render = function() {
-        if (playerImg == null) {            // debug test
-            alert("Null player image " + playerSprite);
-        }
         var coord = board.getCoordinates(x, y);
         switch (useSecondaryImage) {
             case 'halo':
+                // Draw the halo behind the player image
                 ctx.drawImage(haloImg, coord[0], coord[1]);
                 // Fall through & draw the normal player sprite over the halo
             case 'none':
@@ -358,19 +355,33 @@ var Player = function() {
                 ctx.drawImage(playerImg, coord[0], coord[1]);
                 break;
             case 'ghost':
+                /* Ghost is the original with colors inverted. Used after a
+                 * collision (death).
+                 */
                 ctx.drawImage(ghostImg, coord[0], coord[1]);
         }
     };
 
+    /* Store the result of an "interesting" keypress to be processed by
+     * player.update(). Called by the event listener on a keyup event.
+     *      parameter: move = string representation of the key that was
+     *      pressed.
+     */
     this.handleInput = function(move) {
-        // Increment the member of the keyPresses object indexed by 'move'
+        /* Increment the member of the keyPresses object that is indexed by
+         * the value of move.
+         */
         if (typeof keyPresses[move] === "undefined") {
             return;
         }
         keyPresses[move] ++;
-//console.log(keyPresses);    //debug
     };
 
+    /* Store the images to be displayed for the player. They are only
+     * available after Resources is done loading, so this function is called by
+     * gImgInit.
+     *
+     */
     this.imgInit =  function() {
         // Called to complete setup once Resources is loaded
         playerImg = Resources.get(playerSprite);
@@ -382,14 +393,12 @@ var Player = function() {
         // Processing when the player wins (reaches the water row)
         useSecondaryImage = 'halo';     // Add a halo to our hero
         animationDelay = 1;             // Savor the moment
-        console.log('You win');     // debug
     };
 
     this.processEnemyCollision = function() {
         // Processing for when the player collides with an enemy
         useSecondaryImage = 'ghost';
         animationDelay = 1;
-        console.log('You lose');    // debug
     };
 
 };
@@ -403,7 +412,10 @@ for (var i = 0; i < board.numEnemies; i++) {
 // Place the player object in a variable called player
 var player = new Player;
 
-// Tell Resources to initialize our images when it's done loading.
+/* Tell Resources to initialize our images when it's done loading. This
+ * function is registered as a callback with Resources, an is called
+ * between Resources load and the kickoff of Engine's main().
+ */
 function gImgInit() {
     for (var i = 0, stop = allEnemies.length; i < stop; i++) {
         allEnemies[i].imgInit();
@@ -424,6 +436,7 @@ document.addEventListener('keyup', function(e) {
     };
 
     if (e.keyCode == 27) {
+        // Added processing quits the game if Esc is pressed
         board.gameStatus = 'stop';
     } else {
         player.handleInput(allowedKeys[e.keyCode]);
