@@ -14,15 +14,7 @@
  *      on the game board.
  */
 
-/* Global helper function returns a random integer between 0 and the argument,
- * inclusive.
- */
-function gRand (x) {
-    return Math.floor(Math.random() * x);
-}
-
 // Constructor of the Board class, described above.
-
 var Board = function() {
     /* Enemies need to know if they've overshot the right edge of the canvas.
      * Engine.js has been modified to use these dimensions when the canvas
@@ -169,6 +161,13 @@ var Enemy = function() {
       */
 };
 
+/* Helper function returns a random integer between 0 and the argument,
+ * inclusive.
+ */
+Enemy.prototype.rand = function(x) {
+    return Math.floor(Math.random() * x);
+}
+
 // Deferred setup, has to wait till Resources is loaded. Called by gImgInit().
 Enemy.prototype.imgInit = function() {
     this.spriteImg = Resources.get(this.sprite);
@@ -178,8 +177,8 @@ Enemy.prototype.imgInit = function() {
 
 // Helper function to (re)initialize for a new pass
 Enemy.prototype.setNewPass = function() {
-    this.crossTime = gRand(3) + 1;  // cross in 1 - 3 sec
-    this.pathIdx = gRand(3) + 1;    // path 0 is the water, 1-3 are enemy paths
+    this.crossTime = this.rand(3) + 1;  // cross in 1 - 3 sec
+    this.pathIdx = this.rand(3) + 1;    // path 0 is the water, 1-3 are enemy paths
     this.xPerSec = Math.floor(board.canvasWidth / this.crossTime);
     this.pathY = this.pathIdx * board.blockHeight;
     this.currX = -(this.spriteWidth); // Completely offscreen until first update
